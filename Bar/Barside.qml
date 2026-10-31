@@ -1,131 +1,167 @@
 import Quickshell
+import QtQuick 2.0
 import QtQuick
 import Quickshell.Wayland
 import QtQuick.Controls
+import QtQuick.Shapes.DesignHelpers 6.12
 
-Scope {
-    // Mocking the missing global contexts so it doesn't crash
+Scope{
     QtObject {
-        id: color
+        id: outline
         property color cbodyStroke: Qt.rgba(255, 1, 1, 0.5) // semi-transparent white stroke
     }
 
-    QtObject {
-        id: config
-        readonly property int popupNone: 0
-        readonly property int popupActive: 1
-    }
-
-    // Wrap in a real PanelWindow so Quickshell maps it to your desktop
-    PanelWindow {
-        id: smth
-
-        // Correctly attaching Wayland protocols to a window type
-        // WlrLayershell.namespace: "diinki_celestialantiquity:bars"
+    PanelWindow{
+        id: bar
         exclusionMode: ExclusionMode.Ignore
-        //WlrLayershell.keyboardFocus:
-
-        // Fix the layout positioning so it hugs the left side of the screen
-        anchors {
+        // color: "transparent"
+        anchors{
             top: true
             bottom: true
-            left: true
-            right: false
+            left: false
+            right: true
         }
-        implicitWidth: 115
-        color: Qt.rgba(0, 0, 0, 0) // Transparent window backdrop
+        // margins{
+        //     top: 100
+        //     bottom: 100
+        // }
+        // implicitWidth: (barmousearea.containsMouse ? 50: 20) - 20
+            // Keys.onPressed: (event) => {
+            //     if ()
 
-        // State Properties
-        property int currentPopup: config.popupNone
-        property bool isOpen: false
+            // }
+        implicitWidth: (barmousearea.containsMouse ? 50: 0)
+        Behavior on implicitWidth{
+            NumberAnimation{
+                    duration: 175
+                easing{
+                    type: Easing.InOutQuad
 
-        function closeAllPopups() {
-            currentPopup = config.popupNone;
-            isOpen = false;
 
+                }
+            }
         }
-        // The Visual Curve
-        Item {
-            id: radialBarCurve
+        implicitHeight: 270
+        // implicitHeight: (barmousearea.containsMouse ? 50: 20) + 10
+        // Behavior on implicitHeight{
+        //     NumberAnimation{
+        //         duration: 175
+        //         easing{
+        //             type: Easing.InOutQuad
+        //         }
+        //     }
+        // }
+          color: Qt.rgba(255, 0, 0, 0.1) // Transparent window backdrop
+
+        Item{
+            id: barcurve
             anchors.fill: parent
-
-            property point pointA: Qt.point(0, parent.height - parent.height / 1.38)
-
-            property point pointB: Qt.point(0, parent.height / 1.38)
-            property real curvature: mfmousearea.containsMouse ? 120 : 60
-            onCurvatureChanged: {
-                curveCanvas.requestPaint();
+            property point pointA: Qt.point(0, parent.height )
+            property point pointB1: Qt.point(0, parent.height)
+            property real curvature: barmousearea.containsMouse ? 115: 12
+            property real curveHeight: barmousearea.containsMouse ? 400: 400
+            property real shift: barmousearea.containsMouse ?  -(bar.implicitHeight / 2 ) + 150 : 10
+            onCurvatureChanged: {0
+                curvemove.requestPaint()
             }
-            Behavior on curvature {
-                NumberAnimation {
-                    duration: 200
-                    easing.type: Easing.OutSine
+            Behavior on shift{
+                NumberAnimation{
+                    duration: 175
+                    easing{
+                        type: Easing.InOutQuad
+                        amplitude: 1.0
+                          period: 0.5
+                    }
+
                 }
             }
-            Rectangle {
-                color: "transparent"
-                width: parent.width
-                height: parent.height
-                MouseArea {
-                    id: mfmousearea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.LeftButton
+            Behavior on curvature{
+                NumberAnimation{
+                    duration: 2000
+                    easing.type: Easing.OutExpo
+
                 }
             }
+            Behavior on curveHeight{
+                NumberAnimation{
+                    duration: 2000
+                    easing.type: Easing.OutExpo
+                }
+            }
+
+            // Rectangle{
+            //     color: "white"
+            //     width: parent.width
+            //     height: parent.height
+            // }
+
             function controlPoint(a, b, curve) {
                 var midX = (a.x + b.x) / 2;
                 var midY = (a.y + b.y) / 2;
                 return Qt.point(midX + curve, midY);
             }
-            Canvas {
-                id: curveCanvas
-                anchors.fill: parent
-                property color curveblack: "black"
 
+
+            Canvas{
+                id: curvemove
+                anchors.fill: parent
+                property color curvecolor: "black"
+                EllipseShape{
+                    fillColor: "transparent"
+                    strokeColor: "transparent"
+                    height: 400
+                    width: parent.width + 50
+                    y: 270
+                    x:  15
+                }
+                Rectangle{
+                    color: Qt.rgba(0, 0, 0, 0) // Transparent window backdrop
+
+                    // color: "transparent"
+                    width: parent.width
+                    height: 400
+                    y: 270
+                    MouseArea{
+                        id: barmousearea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton
+
+                    }
+                }
                 onPaint: {
                     var ctx = getContext("2d");
-                    ctx.clearRect(0, 0, width, height);
+                    ctx.clearRect(0,0, width, height);
 
-                    var cp = radialBarCurve.controlPoint(radialBarCurve.pointA, radialBarCurve.pointB, radialBarCurve.curvature);
                     ctx.beginPath();
-                    ctx.moveTo(radialBarCurve.pointA.x, radialBarCurve.pointA.y);
-                    ctx.quadraticCurveTo(cp.x, cp.y, radialBarCurve.pointB.x, radialBarCurve.pointB.y);
-                     console.log(cp.x, cp.y, radialBarCurve.pointB.x, radialBarCurve.pointB.y, radialBarCurve.curvature )
-                    // ctx.arcTo(cp.x, cp.y, radialBarCurve.pointB.x, radialBarCurve.pointB.y, cp.y);
-                    ctx.closePath();
+                    ctx.ellipse(barcurve.shift, bar.implicitHeight , barcurve.curvature , barcurve.curveHeight);
+                    console.log(barcurve.shift, bar.implicitHeight, barcurve.curvature, barcurve.curveHeight)
+                    ctx.closePath()
 
                     ctx.lineWidth = 1;
-                    ctx.strokeStyle = color.cbodyStroke;
-                    ctx.fillStyle = Qt.rgba(curveblack.r, curveblack.g, curveblack.b, 0.2);
+                    ctx.strokeStyle = outline.cbodyStroke;
+                    ctx.fillStyle = Qt.rgba(123, 24, 0, 0.1);
 
                     ctx.fill();
                     ctx.stroke();
+
+
                 }
+
+
             }
+
+
+
+
         }
 
-        // Tap outside overlay (Fixing "somethingelse" to reference "smth")
-        PanelWindow {
-            id: closerPanel
-            screen: smth.screen
-            WlrLayershell.layer: WlrLayer.Top
-            visible: smth.isOpen || smth.currentPopup != config.popupNone
-            exclusionMode: ExclusionMode.Ignore
-            color: Qt.rgba(0, 0, 0, 0)
 
-            anchors {
-                top: true
-                bottom: true
-                left: true
-                right: true
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: smth.closeAllPopups()
-            }
-        }
 
     }
+
+
+
+
+
 }
